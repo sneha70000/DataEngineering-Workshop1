@@ -1,28 +1,39 @@
 import requests
-from bs4 import BeautifulSoup
 import re
+from bs4 import BeautifulSoup
 
-res = requests.get('https://www.lipsum.com/')
-soup = BeautifulSoup(res.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
-data = soup.find('div', id=re.compile(r"Panes"))
-print(soup.find("h1").text)
+url = "https://blog.python.org/blog/"
+response = requests.get(url)
+soup = BeautifulSoup(response.content, "html5lib")
 
-question_list = []
-answer_list = []
-for row in data.find_all("div"):
-    question_header = row.h2
-    question_list.append(question_header.text)
-    answer_string = ""
-    parent_div_element = row.find_parent("div")
-    all_p_tag_list = parent_div_element.find_all("p")
-    for p_tag in all_p_tag_list:
-        answer_string = answer_string + p_tag.text + "\n"
-    answer_list.append(answer_string)
+headings = soup.find_all("h3")
 
-file = open("qn_and_answer.txt", "w")
-for i in range(len(question_list)):
-    file.write(question_list[i] + "\n" + answer_list[i] + "\n")
-file.close()
+posts = []
+for h in headings:
+    # The post link wraps the h3 as a parent, not a child
+    parent_link = h.find_parent("a")
+    if not parent_link:
+        continue
+    href = parent_link.get("href", "")
+    if not re.search(r"/\d{4}/\d{2}/", href):
+        continue
 
-print("The question and answer have been saved to qn_and_answer.txt file")
+    title = h.get_text(strip=True)
 
+    author_tag = h.find_next("a", href=re.compile(r"^/authors/"))
+    author = author_tag.get_text(strip=True) if author_tag else "Unknown author"
+
+    date = "Unknown date"
+    if author_tag:
+        meta_text = author_tag.parent.get_text()
+        date_match = re.search(r"[A-Z][a-z]+ \d{1,2}, \d{4}", meta_text)
+        if date_match:
+            date = date_match.group(0)
+
+    posts.append((title, author, date))
+
+print(f"Found {len(posts)} posts:\n")
+for i, (title, author, date) in enumerate(posts, start=1):
+    print(f"{i}. {title}")
+    print(f"   By {author} · {date}")
+    print()

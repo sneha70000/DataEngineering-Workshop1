@@ -7,3 +7,5 @@ WORKDIR /root/workspace/src
 # Install required packages
 RUN pip install --upgrade pip
 RUN pip install requests bs4 html5lib
+CMD ["web_scraping_sample.py"]
+ENTRYPOINT ["python"]
